@@ -1,0 +1,215 @@
+---
+title: "Teaching Scrip for Data Vis"
+author: "Camila Vargas Poulsen"
+date: '2023-02-01'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+- The goal is to introduce the basics of plotting data with `ggplot2` to create publication grade graphics.
+- `ggplot2` is a popular package for visualizing data in R.
+- Base are has a plotting function that we used yesterday, which allowed us to create quick graphs. What I call sketch graphs. It let us see the data in a visual way, but the plots it self where not that nice.
+
+Se what **`ggplot2`** does is:
+
+- that makes it simple to create complex plots.
+
+- It allows you specifying what variables to plot, how to plot them in a programmatic interface.
+
+- ggplot graphics are built step by step by adding new elements by layers. 
+
+- Adding elements in layers allows for a lot flexibility and customization of plots.
+
+
+## Set up
+
+```{r loadlibraries, warning=FALSE, message=FALSE}
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+```
+
+
+
+## Read data
+
+```{r, warning=FALSE, message=FALSE}
+survey_raw <- read_csv("https://dev.nceas.ucsb.edu/knb/d1/mn/v2/object/urn%3Auuid%3A71cb8d0d-70d5-4752-abcd-e3bcf7f14783", show_col_types = FALSE)
+
+
+events <- read_csv("https://dev.nceas.ucsb.edu/knb/d1/mn/v2/object/urn%3Auuid%3A0a1dd2d8-e8db-4089-a176-1b557d6e2786", show_col_types = FALSE)
+```
+
+## Inspect data
+```{r}
+glimpse(survey_raw)
+glimpse(events)
+```
+
+
+## Clean data
+ 
+```{r}
+survey_clean <- survey_raw %>% 
+    select(-notes) %>% 
+    mutate(Q1 = if_else(Q1 == 1, "below expectations", Q1)) %>% 
+    mutate(Q2 = tolower(Q2))
+```
+ 
+
+## Join events and survey data
+
+```{r}
+survey_joined <- left_join(survey_clean, events, by = "StartDate")
+
+## explore
+colnames(survey_joined)
+unique(survey_joined$location)
+unique(survey_joined$Q1) ## participant expectations
+```
+
+## Plotting survey data
+
+- Plot answers to Q1 by location
+
+Start by creating a bar graph showing number of responses by location.
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location))+
+    geom_bar() ## will automatically count our data for us.
+
+```
+
+Bar graphs with blue bars
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location, fill = "blue"))+
+    geom_bar()
+```
+
+**What happen here.**
+Clearly we did not achieve our goal of getting blue bars.
+What happened is that because we used the fill argument inside out `aes()` function, under the hood, ggplot created a new variable to our data or a new column and with the value "blue". Anytime we want `ggplot` to adjust somthing based on one of the variables of oour data we put that argument inside the `aes()` function. However, because we just want to change the color of the bars based on something cosmetics, just make them blue. We need to provide that argument outside the `aes()` function.
+
+
+**So lets try this again.**
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location))+
+    geom_bar(fill = "blue")
+```
+
+**Adding answers to Q1**
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location, fill = Q1))+
+    geom_bar()
+```
+
+**Position fill**
+
+In order to make our bar chart show what percentage of respondents gave each answer, we can switch our bar chart by setting the `position` argument within geom_bar to `fill`.
+ 
+Plot percentage of each answer to Q1.
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location, fill = Q1))+
+    geom_bar(position = "fill")
+```
+
+
+**Theme and labs**
+
+We have a plot, is looking good, but there are still things we can make better. For example rename the Y axis and the legend, maybe give my plot a title, remove the x axis label? Change the background.
+
+`ggplot` allows you to do a lot of customization. That is what is so creat about this tool
+
+We are going to use the `lab()` function to modify all the labels and the `theme_bw` function to change the overall aspect of out plot.
+
+## Setting plots themes
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location, fill = Q1))+
+    geom_bar(position = "fill")+
+    labs(title = "To what degree did the ccourse meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Responses")+
+    theme_bw()
+```
+ 
+## Challenge
+Use RStudio auto complete or the documentation of the `ggplot` function or `ggplot` cheetsheet, or good ol' google to find other build in themes you might like.
+ 
+
+With this exercise we tried different functions that change the overall looks of our plot. However, we can also customize elements individually using the `theme()`.
+
+## Using the `theme()` function
+
+Lets say we want to maje the "nceas" and "remote" sho at an angle.
+
+```{r}
+ggplot(survey_joined, aes(x = location, fill = Q1)) +
+    geom_bar(position = "fill") +
+    labs(title = "To what degree did the course meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Response") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45))
+
+
+
+ggplot(survey_joined, aes(x = location, fill = Q1)) +
+    geom_bar(position = "fill") +
+    labs(title = "To what degree did the course meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Response") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+```
+
+**ORDER MATTERS**
+
+Note that the `theme()` call needs to come after any built in themes like `theme_bw()` are used. Otherwise, `theme_bw()` will likely override any theme elements that you changed using `theme()`.
+
+## Saving my theme option
+Another handy thing that `ggplot` allows us to do is to save the result of a series of themes into an object and then call that object whenever we need it. This is very useful when you have multiple plots and you want all of them to have the same theme. 
+
+```{r}
+my_theme <- theme_bw()+
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
+```
+
+
+## Calling in "My theme" to create my plot
+
+```{r}
+ggplot(survey_joined,
+       aes(x = location, fill = Q1))+
+    geom_bar(position = "fill")+
+    labs(title = "To what degree did the course meet expectation?",
+         x = "",
+         y = "Percent of Rsponses",
+         fill = "Responses")+
+    my_theme
+```
+
+
+
+
+
+ 
+ 
