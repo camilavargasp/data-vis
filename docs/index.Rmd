@@ -1,5 +1,5 @@
 ---
-title: "Teaching Scrip for Data Vis"
+title: "Teaching Script for Data Vis"
 author: "Camila Vargas Poulsen"
 date: '2023-02-01'
 output_dir: "docs"
@@ -32,6 +32,8 @@ Se what **`ggplot2`** does is:
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(viridis)
+library(scales)
 
 ```
 
@@ -58,8 +60,7 @@ glimpse(events)
 ```{r}
 survey_clean <- survey_raw %>% 
     select(-notes) %>% 
-    mutate(Q1 = if_else(Q1 == 1, "below expectations", Q1)) %>% 
-    mutate(Q2 = tolower(Q2))
+    mutate(Q1 = if_else(Q1 == 1, "below expectations", Q1))
 ```
  
 
@@ -186,11 +187,29 @@ ggplot(survey_joined, aes(x = location, fill = Q1)) +
 
 Note that the `theme()` call needs to come after any built in themes like `theme_bw()` are used. Otherwise, `theme_bw()` will likely override any theme elements that you changed using `theme()`.
 
-## Saving my theme option
+
+## Playing with font size
+```{r}
+ggplot(survey_joined, aes(x = location, fill = Q1)) +
+    geom_bar(position = "fill") +
+    labs(title = "To what degree did the course meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Response") +
+    theme_bw(base_size = 16) 
+    # theme(axis.text.x = element_text(angle = 45, vjust = 0.5, size = 16),
+    #       axis.title.y = element_text(size = 16))
+          # text = element_text(size = 20))
+         
+        
+```
+
+
+## Saving my **theme** option
 Another handy thing that `ggplot` allows us to do is to save the result of a series of themes into an object and then call that object whenever we need it. This is very useful when you have multiple plots and you want all of them to have the same theme. 
 
 ```{r}
-my_theme <- theme_bw()+
+my_theme <- theme_bw(base_size = 16)+
     theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 ```
 
@@ -209,8 +228,135 @@ ggplot(survey_joined,
 ```
 
 
+## Ordering responses using factors
+
+- You might notice that our tick labels don’t appear in a very intuitive order. We would probably prefer to order these so that we have them in order of below, just below, met, just above, and exceeded. We can do this using factors.
+
+- A factor in R is a class of data (like numeric or character) that **represents data that contain a fixed and known set of values**. Factors are often used in survey data, like the example we are using, as two of our four questions have a set of known values.
+
+Lets look ant the values of in our column Q1
+```{r}
+unique(survey_joined$Q1)
+class(survey_joined$Q1)
+```
+
+- We can use the `factor` function to transform our character vector of Q1 responses into a factor, and the `levels` argument to order the levels. To do this, we will combine it with the mutate function call.
+
+```{r}
+
+survey_joined <- survey_joined %>% 
+    mutate(Q1 = factor(Q1, levels = c("exceeded expectations", 
+                                      "just above expectations",
+                                      "met expectations",
+                                      "just below expectations",
+                                      "below expectations")))
+```
+
+
+## Plot with ordered responses
+```{r}
+ggplot(survey_joined, aes(x = location, fill = Q1)) +
+    geom_bar(position = "fill") +
+    labs(title = "To what degree did the course meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Response")+
+    my_theme
+```
+
+- Our code for plotting did not change, however, because we defined our variables as factors and gave them levels, `ggplot` takes that information and use it for plotting our variables in the order we gave them above. 
+
+- We can also see how the default colors are still the same. 
+
+- The first variable gets the salmon color. So, even though the order of our variable changed, `ggplot` default color pallet is still the same and assigns colors in order.
+
+ 
+## Changing colors and making scale a percent
+ 
+One last thing we might want to do is to set a nicer color palette. Here we use `scale_fill_viridis` from the `viridis` package. We can also add `scale_y_continuous` with the `labels = percent` argument to set the y tick labels in percent format.
+ 
+```{r, eval=FALSE}
+ggplot(survey_joined, aes(x = location, fill = Q1)) +
+    geom_bar(position = "fill") +
+    scale_fill_viridis(discrete = TRUE) +
+    scale_y_continuous(labels = percent) +
+    labs(title = "To what degree did the course meet expectations?",
+         x = "",
+         y = "Percent of Responses",
+         fill = "Response") +
+    my_theme
+```
+ 
+ 
+## Saving our plot
+
+```{r eval=FALSE}
+ggsave("question1.png", width = 3, height = 3, units = "in") 
+```
+
+- `ggsave()` will either save the last plot we run. 
+- lets look at the documentation in the help page to see how this function works
+
+
+Now we are going to create a different plot, where we are going to plot multiple plots at once.
+
+For this exerciser we are going to plot Q1 and Q2. 
+
+**I want to know the number of responses for each of the categories for Q1 and Q2 by location.**
+
+As a reminder, we can check the categories for each of this questions using the `unique()` function
+
+```{r, eval=FALSE}
+unique(survey_joined$Q1)
+unique(survey_joined$Q2)
+```
+
+Do you see anything wired in the values of Q2?
+
+## Transforming data frame into long format
+
+The first step to be able to plot answers of both questions, we have to make our data frame into a long format.
+
+Does anyone remember what is the name of the function to transform a data frame to long format?
+
+I generally need to look to the documentation of this function to make sure I get all the arguments right.
+
+so lets type in the console `?pivot_longer()`
+
+- Making out data long
+
+```{r, eval=FALSE}
+survey_long <- survey_joined %>% 
+    mutate(Q2 = tolower(Q2)) %>% 
+    pivot_longer(cols = starts_with("Q"),
+                 names_to = "id", 
+                 values_to = "answer") %>% 
+    filter(id %in% c("Q1", "Q2"))
+```
+
+## Plotting Q1 and Q2 responses
+
+Number of responses for each possible answer for question 1 and question 2 by location.
+```{r, eval=FALSE}
+ggplot(survey_long, 
+       aes(x = answer, fill = location)) + 
+    geom_bar(position = "dodge") +
+    scale_fill_viridis(discrete = TRUE) +
+    labs(x = "", 
+         y = "Number of Responses", 
+         fill = "Location") +
+    facet_wrap(~id, scales = "free") +
+    my_theme
+
+```
 
 
 
+
+
+ 
+ 
+ 
+ 
  
  
