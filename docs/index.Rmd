@@ -1,7 +1,7 @@
 ---
 title: "Teaching Script for Data Vis"
 author: "Camila Vargas Poulsen"
-date: '2023-02-01'
+date: '2023-03-01'
 output_dir: "docs"
 output: html_document
 ---
@@ -10,11 +10,18 @@ output: html_document
  
 ```
 
-- The goal is to introduce the basics of plotting data with `ggplot2` to create publication grade graphics.
-- `ggplot2` is a popular package for visualizing data in R.
-- Base are has a plotting function that we used yesterday, which allowed us to create quick graphs. What I call sketch graphs. It let us see the data in a visual way, but the plots it self where not that nice.
+## Learning Goals
 
-Se what **`ggplot2`** does is:
+-   The basics of the `ggplot2` package to create static plots
+-   How to use `ggplot2`’s theming abilities to create publication-grade graphics
+-   Create interactive visualizations introducing the basics of the `leaflet` package to create interactive maps and the basicst of the `DT` package to interactive tables.
+
+## `ggplot`
+
+-   `ggplot2` is a popular package for visualizing data in R.
+-   On Monday we used base R plotting function, which allowed us to create quick graphs. What we can call sketch graphs. It let us see the data in a visual way, but the plots it self where not that nice.
+
+So what **`ggplot2`** does is:
 
 - that makes it simple to create complex plots.
 
@@ -23,6 +30,8 @@ Se what **`ggplot2`** does is:
 - ggplot graphics are built step by step by adding new elements by layers. 
 
 - Adding elements in layers allows for a lot flexibility and customization of plots.
+
+----
 
 
 ## Set up
